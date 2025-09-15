@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or 'VM Manager' }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+      /* === Заголовки === */
+      h1, h2, h3, h4, h5, h6 {
+        color: #212121; /* самый тёмный серый (почти чёрный) */
+        font-weight: 600;
+      }
+      body {
+        max-width: 1100px;
+        margin: 2rem auto;
+        background-color: #f5f5f5; /* material grey 100 */
+      }
+      .error { color: #d32f2f; } /* material red 700 */
+
+      /* === Карточки === */
+      .card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      /* === Навигация === */
+      nav {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        padding: 0.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      nav ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+      nav a {
+        text-decoration: none;
+        color: #1976d2; /* primary */
+        font-weight: 500;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+
+      /* === Общие стили кнопок === */
+      a[role="button"], button {
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        transition: background-color 0.3s ease,
+                    border-color 0.3s ease,
+                    transform 0.1s ease,
+                    box-shadow 0.2s ease;
+      }
+      a[role="button"]:hover, button:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+      }
+      a[role="button"]:active, button:active {
+        transform: scale(0.97);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+
+      /* Красная кнопка (Удалить) */
+      button.contrast {
+        background-color: #d32f2f; /* red 700 */
+        border-color: #d32f2f;
+        color: #fff;
+      }
+      button.contrast:hover,
+      button.contrast:focus {
+        background-color: #b71c1c; /* red 800 */
+        border-color: #b71c1c;
+      }
+      button.contrast:active {
+        background-color: #8e0000; /* red 900 */
+        border-color: #8e0000;
+      }
+
+      /* Синяя кнопка (Создать / Сохранить) */
+      a[role="button"], button.submit-btn {
+        background-color: #1976d2; /* blue 700 */
+        border-color: #1976d2;
+        color: #fff;
+      }
+      a[role="button"]:hover,
+      a[role="button"]:focus,
+      button.submit-btn:hover,
+      button.submit-btn:focus {
+        background-color: #1565c0; /* blue 800 */
+        border-color: #1565c0;
+      }
+      a[role="button"]:active,
+      button.submit-btn:active {
+        background-color: #0d47a1; /* blue 900 */
+        border-color: #0d47a1;
+      }
+
+      /* Серая кнопка (Отмена) */
+      a.secondary {
+        background-color: #616161; /* grey 700 */
+        border-color: #616161;
+        color: #fff;
+      }
+      a.secondary:hover,
+      a.secondary:focus {
+        background-color: #424242; /* grey 800 */
+        border-color: #424242;
+      }
+      a.secondary:active {
+        background-color: #212121; /* grey 900 */
+        border-color: #212121;
+      }
+
+      /* === Стили для input === */
+      input[type="text"], input[type="email"], input[type="password"], input[type="number"] {
+        border-radius: 6px;
+        border: 1px solid #757575;   /* grey 600 */
+        padding: 0.5rem 0.75rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      input:focus {
+        border-color: #1976d2; /* blue 700 */
+        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+        outline: none;
+      }
+
+      /* === Стили для таблицы === */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+      table th, table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #9e9e9e; /* grey 500 */
+      }
+      table th {
+        background-color: #e0e0e0;   /* grey 300 */
+        font-weight: 600;
+      }
+      table tr:hover td {
+        background-color: #eeeeee;   /* grey 200 */
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <ul>
+        <li><strong>VM Manager</strong></li>
+      </ul>
+      <ul>
+        {% if current_user.is_authenticated %}
+          <li><a href="{{ url_for('vms') }}">Мои ВМ</a></li>
+          <li><a href="{{ url_for('profile') }}">Профиль</a></li>
+          <li><a href="/apidocs">Swagger</a></li>
+          <li><a href="{{ url_for('logout') }}">Выход</a></li>
+        {% else %}
+          <li><a href="{{ url_for('login') }}">Вход</a></li>
+          <li><a href="{{ url_for('register') }}">Регистрация</a></li>
+          <li><a href="/apidocs">Swagger</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <article class="card">
+          {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+        </article>
+      {% endif %}
+    {% endwith %}
+
+    <main class="card">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

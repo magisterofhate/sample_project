@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Мои виртуальные машины</h2>
+
+  {% if vms|length == 0 %}
+    <p>У вас ещё нет ни одной ВМ.</p>
+    <a href="{{ url_for('vm_create') }}" role="button" class="submit-btn">Создать</a>
+  {% else %}
+    <div style="display:flex; gap:.75rem; align-items:center; margin-bottom:.75rem;">
+      <a href="{{ url_for('vm_create') }}" role="button" class="submit-btn">Создать</a>
+      <form id="delete-form" method="post" action="{{ url_for('vms_delete') }}" onsubmit="return confirmDelete(event)" style="margin:0;">
+        <button type="submit" class="contrast">Удалить</button>
+      </form>
+    </div>
+
+    <form id="vms-form" method="post" action="{{ url_for('vms_delete') }}">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:2rem;">
+              <input type="checkbox" id="check-all" onclick="toggleAll(this)">
+            </th>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>RAM (ГБ)</th>
+            <th>CPU</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vm in vms %}
+          <tr>
+            <td><input type="checkbox" name="vm_ids" value="{{ vm.id }}"></td>
+            <td>{{ vm.id }}</td>
+            <td>{{ vm.name }}</td>
+            <td>{{ vm.ram_gb }}</td>
+            <td>{{ vm.cpu }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </form>
+
+    <script>
+      function toggleAll(source){
+        const boxes = document.querySelectorAll('input[name="vm_ids"]');
+        boxes.forEach(b => b.checked = source.checked);
+      }
+      function confirmDelete(e){
+        e.preventDefault();
+        const anyChecked = !!document.querySelector('input[name="vm_ids"]:checked');
+        if (!anyChecked) { alert('Выберите хотя бы одну ВМ'); return false; }
+        if (confirm('Вы действительно хотите удалить выбранные ВМ?')) {
+          document.getElementById('vms-form').submit();
+        }
+        return false;
+      }
+    </script>
+  {% endif %}
+{% endblock %}

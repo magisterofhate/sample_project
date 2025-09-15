@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Профиль</h2>
+  <form method="post">
+    <label>ФИО
+      <input type="text" name="full_name" value="{{ current_user.full_name or '' }}">
+    </label>
+    <label>Email
+      <input type="email" name="email" value="{{ current_user.email }}" required>
+    </label>
+    <button type="submit">Сохранить</button>
+  </form>
+{% endblock %}

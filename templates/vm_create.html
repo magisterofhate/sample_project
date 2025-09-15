@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Создать виртуальную машину</h2>
+
+  <form method="post">
+    <label>Имя ВМ
+      <input type="text" name="name" required>
+    </label>
+    <label>RAM (ГБ) — минимально 0, максимально 32
+      <input type="text" name="ram_gb" required>
+    </label>
+    <label>CPU — минимально 1, максимально 16
+      <input type="text" name="cpu" required>
+    </label>
+    <div style="display:flex; gap:.5rem;">
+      <a href="{{ url_for('vms') }}" role="button" class="secondary">Отмена</a>
+      <button type="submit" class="submit-btn">Создать</button>
+    </div>
+  </form>
+
+  {% if errors %}
+    <ul class="error">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
