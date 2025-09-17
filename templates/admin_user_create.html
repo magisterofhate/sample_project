@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Создать пользователя</h2>
+
+<form method="post">
+  <label>Email
+    <input type="email" name="email" required>
+  </label>
+  <label>ФИО
+    <input type="text" name="full_name">
+  </label>
+  <label>Пароль (мин. 6 символов)
+    <input type="password" name="password" required minlength="6">
+  </label>
+
+  <fieldset style="margin-top:.5rem;">
+    <label><input type="checkbox" name="is_admin"> Администратор</label>
+    <label><input type="checkbox" name="is_blocked"> Заблокирован</label>
+  </fieldset>
+
+  <div style="display:flex; gap:.5rem; margin-top: .75rem;">
+    <a href="{{ url_for('admin_users') }}" role="button" class="secondary">Отмена</a>
+    <button type="submit" class="submit-btn">Создать</button>
+  </div>
+</form>
+
+{% if errors %}
+  <ul class="error">
+    {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

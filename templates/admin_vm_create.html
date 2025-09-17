@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Создать ВМ для пользователя</h2>
+
+<form method="post">
+  <label>Имя ВМ
+    <input type="text" name="name" required>
+  </label>
+
+  <label>RAM (ГБ) — 0..32
+    <input type="text" name="ram_gb" required>
+  </label>
+
+  <label>CPU — 1..16
+    <input type="text" name="cpu" required>
+  </label>
+
+  <label>Владелец
+    <select name="owner_id" required>
+      <option value="">— выберите пользователя —</option>
+      {% for u in users %}
+        <option value="{{ u.id }}">{{ u.email }}{% if u.full_name %} — {{ u.full_name }}{% endif %}{% if u.is_blocked %} (заблокирован){% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <div style="display:flex; gap:.5rem; margin-top: .75rem;">
+    <a href="{{ url_for('admin_vms') }}" role="button" class="secondary">Отмена</a>
+    <button type="submit" class="submit-btn">Создать</button>
+  </div>
+</form>
+
+{% if errors %}
+  <ul class="error">
+    {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

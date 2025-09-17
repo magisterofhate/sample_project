@@ -24,6 +24,7 @@
             <th>Имя</th>
             <th>RAM (ГБ)</th>
             <th>CPU</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -34,6 +35,7 @@
             <td>{{ vm.name }}</td>
             <td>{{ vm.ram_gb }}</td>
             <td>{{ vm.cpu }}</td>
+            <td><a href="{{ url_for('vm_edit', vm_id=vm.id) }}">Редактировать</a></td>
           </tr>
           {% endfor %}
         </tbody>

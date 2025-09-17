@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title or 'VM Manager' }}</title>
+    <title>{{ title or 'VM for everyone' }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <style>
       /* === Заголовки === */
@@ -166,15 +166,21 @@
       <ul>
         {% if current_user.is_authenticated %}
           <li><a href="{{ url_for('vms') }}">Мои ВМ</a></li>
+
+          {% if current_user.is_admin %}
+            <li><a href="{{ url_for('admin_users') }}">Пользователи</a></li>
+            <li><a href="{{ url_for('admin_vms') }}">Все ВМ</a></li>
+            <li><a href="/apidocs" target="_blank" rel="noopener noreferrer">Swagger</a></li>
+          {% endif %}
+
           <li><a href="{{ url_for('profile') }}">Профиль</a></li>
-          <li><a href="/apidocs">Swagger</a></li>
           <li><a href="{{ url_for('logout') }}">Выход</a></li>
         {% else %}
           <li><a href="{{ url_for('login') }}">Вход</a></li>
           <li><a href="{{ url_for('register') }}">Регистрация</a></li>
-          <li><a href="/apidocs">Swagger</a></li>
         {% endif %}
       </ul>
+
     </nav>
 
     {% with messages = get_flashed_messages() %}

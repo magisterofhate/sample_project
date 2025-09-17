@@ -264,6 +264,85 @@ def admin_vms():
     return render_template('admin_vms.html', rows=rows)
 
 
+# === ADMIN: создать пользователя ===
+@app.route('/admin/users/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_user_create():
+    errors = []
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        full_name = (request.form.get('full_name') or '').strip()
+        password = (request.form.get('password') or '').strip()
+        is_admin = True if request.form.get('is_admin') == 'on' else False
+        is_blocked = True if request.form.get('is_blocked') == 'on' else False
+
+        if not email:
+            errors.append('Email обязателен')
+        if not password or len(password) < 6:
+            errors.append('Пароль обязателен и не короче 6 символов')
+        if Users.query.filter_by(email=email).first():
+            errors.append('Пользователь с таким email уже существует')
+
+        if not errors:
+            u = Users(email=email, full_name=full_name, is_admin=is_admin, is_blocked=is_blocked)
+            u.set_password(password)
+            db.session.add(u)
+            db.session.commit()
+            flash('Пользователь создан')
+            return redirect(url_for('admin_users'))
+
+    return render_template('admin_user_create.html', errors=errors)
+
+
+# === ADMIN: создать ВМ для выбранного пользователя ===
+@app.route('/admin/vms/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_vm_create():
+    users = Users.query.order_by(Users.email.asc()).all()
+    errors = []
+    if request.method == 'POST':
+        name = (request.form.get('name') or '').strip()
+        ram_raw = (request.form.get('ram_gb') or '').strip()
+        cpu_raw = (request.form.get('cpu') or '').strip()
+        owner_id = request.form.get('owner_id')
+
+        # валидация
+        if not name:
+            errors.append('Имя ВМ обязательно')
+        try:
+            ram_gb = int(ram_raw)
+            cpu = int(cpu_raw)
+        except (TypeError, ValueError):
+            errors.append('RAM и CPU должны быть целыми числами')
+            ram_gb = None
+            cpu = None
+        else:
+            if not (0 <= ram_gb <= 32): errors.append('RAM от 0 до 32')
+            if not (1 <= cpu <= 16): errors.append('CPU от 1 до 16')
+
+        owner = None
+        try:
+            owner = Users.query.get(int(owner_id)) if owner_id else None
+        except (TypeError, ValueError):
+            owner = None
+        if not owner:
+            errors.append('Выберите владельца')
+
+        if not errors:
+            vm = VM(name=name, ram_gb=ram_gb, cpu=cpu, is_deleted=False)
+            db.session.add(vm)
+            db.session.flush()  # получить id ВМ
+            # связать с владельцем
+            owner.vms.append(vm)
+            db.session.commit()
+            flash(f'ВМ "{name}" создана для пользователя {owner.email}')
+            return redirect(url_for('admin_vms'))
+
+    return render_template('admin_vm_create.html', users=users, errors=errors)
+
+
 @app.cli.command('ensure-admin')
 def ensure_admin():
     """Создать/обновить предустановленного администратора."""
