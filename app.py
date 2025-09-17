@@ -21,7 +21,30 @@ app.config['SWAGGER'] = {
     'uiversion': 3,
 }
 
-swagger = Swagger(app)
+# --- Настройка swagger для авторизации ---
+# --- Swagger config: требуем сессию (Flask-Login cookie) для API ---
+swagger_template = {
+    "swagger": "2.0",
+    "info": {
+        "title": "VM Manager API",
+        "version": "1.0.0",
+        "description": "API доступен только после входа в систему (cookie-сессия Flask-Login). "
+                       "Сначала выполните вход через /login, затем используйте методы в Swagger."
+    },
+    # cookieAuth говорит Swagger'у, что запросы должны нести cookie сессии (имя по умолчанию 'session')
+    "securityDefinitions": {
+        "cookieAuth": {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "session"
+        }
+    },
+    # глобально требуем авторизацию (можно переопределять в методах при необходимости)
+    "security": [{"cookieAuth": []}],
+    "basePath": "/",
+}
+
+swagger = Swagger(app, template=swagger_template)
 db.init_app(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
@@ -51,12 +74,12 @@ def admin_required(f):
     return wrapper
 
 
-@app.before_request
-def guard_swagger_for_non_admins():
-    p = request.path or ""
-    if p.startswith("/apidocs") or p.startswith("/apidoc") or p.startswith("/apispec"):
-        if not (current_user.is_authenticated and getattr(current_user, "is_admin", False)):
-            return redirect(url_for('login'))
+# @app.before_request
+# def guard_swagger_for_non_admins():
+#     p = request.path or ""
+#     if p.startswith("/apidocs") or p.startswith("/apidoc") or p.startswith("/apispec"):
+#         if not (current_user.is_authenticated and getattr(current_user, "is_admin", False)):
+#             return redirect(url_for('login'))
 
 
 # --- UI роуты ---
@@ -110,22 +133,22 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    if request.method == 'POST':
-        full_name = request.form.get('full_name')
-        email = request.form.get('email').lower()
-        exists = Users.query.filter(Users.email == email, Users.id != current_user.id).first()
-        if exists:
-            flash('Email уже используется другим пользователем')
-        else:
-            current_user.full_name = full_name
-            current_user.email = email
-            db.session.commit()
-            flash('Профиль обновлен')
-            return redirect(url_for('profile'))
-    return render_template('profile.html')
+# @app.route('/profile', methods=['GET', 'POST'])
+# @login_required
+# def profile():
+#     if request.method == 'POST':
+#         full_name = request.form.get('full_name')
+#         email = request.form.get('email').lower()
+#         exists = Users.query.filter(Users.email == email, Users.id != current_user.id).first()
+#         if exists:
+#             flash('Email уже используется другим пользователем')
+#         else:
+#             current_user.full_name = full_name
+#             current_user.email = email
+#             db.session.commit()
+#             flash('Профиль обновлен')
+#             return redirect(url_for('profile'))
+#     return render_template('profile.html')
 
 
 @app.route('/vms')
