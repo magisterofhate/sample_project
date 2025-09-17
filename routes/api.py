@@ -5,10 +5,12 @@ from flasgger import swag_from
 from models import db
 from models.user import Users
 from models.vm import VM
+from sqlalchemy import or_
 
 api_bp = Blueprint('api', __name__)
 
 # ---------- Helpers ----------
+
 
 def require_admin():
     if not (current_user.is_authenticated and getattr(current_user, "is_admin", False)):
@@ -568,3 +570,97 @@ def api_update_me():
         return jsonify({"errors": errors}), 400
 
     return jsonify(user_to_dict(current_user)), 200
+
+
+@api_bp.route('/users/<int:user_id>', methods=['GET'])
+@login_required
+@swag_from({
+    "tags": ["Users"],
+    "summary": "Get user by id (admin)",
+    "description": "Доступно только администратору.",
+    "parameters": [
+        {"in": "path", "name": "user_id", "type": "integer", "required": True}
+    ],
+    "responses": {
+        200: {
+            "description": "OK",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "email": {"type": "string"},
+                    "full_name": {"type": "string"},
+                    "is_admin": {"type": "boolean"},
+                    "is_blocked": {"type": "boolean"}
+                }
+            }
+        },
+        401: {"description": "Unauthorized"},
+        403: {"description": "Forbidden"},
+        404: {"description": "Not found"}
+    },
+    "security": [{"cookieAuth": []}]
+})
+def api_get_user(user_id: int):
+    require_admin()
+    u = Users.query.get_or_404(user_id)
+    return jsonify(user_to_dict(u)), 200
+
+
+@api_bp.route('/users/search', methods=['GET'])
+@login_required
+@swag_from({
+    "tags": ["Users"],
+    "summary": "Search users (admin)",
+    "description": "Поиск по подстроке в email или ФИО (регистронезависимый). Доступно только администратору.",
+    "parameters": [
+        {
+            "in": "query",
+            "name": "q",
+            "type": "string",
+            "required": True,
+            "description": "Подстрока для поиска (email или ФИО)"
+        }
+    ],
+    "responses": {
+        200: {
+            "description": "OK",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "email": {"type": "string"},
+                                "full_name": {"type": "string"},
+                                "is_admin": {"type": "boolean"},
+                                "is_blocked": {"type": "boolean"}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        400: {"description": "Validation error (q is required)"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Forbidden"}
+    },
+    "security": [{"cookieAuth": []}]
+})
+def api_search_users():
+    require_admin()
+    q = (request.args.get('q') or '').strip()
+    if not q:
+        return jsonify({"errors": ["q is required"]}), 400
+
+    users = Users.query.filter(
+        or_(Users.email.ilike(f"%{q}%"),
+            Users.full_name.ilike(f"%{q}%"))
+    ).order_by(Users.id.asc()).all()
+
+    return jsonify({"items": [user_to_dict(u) for u in users]}), 200
+
+
