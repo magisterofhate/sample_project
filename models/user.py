@@ -12,6 +12,10 @@ class Users(db.Model, UserMixin):
     full_name = db.Column(db.String(255), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
 
+    # роли/статус
+    is_admin = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    is_blocked = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+
     vms = db.relationship('VM', secondary=user_vm, backref=db.backref('users', lazy='dynamic'))
 
     def set_password(self, password: str):

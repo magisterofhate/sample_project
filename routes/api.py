@@ -11,15 +11,12 @@ api_bp = Blueprint('api', __name__)
 @login_required
 @swag_from({
     'tags': ['VMs'],
-    'summary': 'List my VMs (not deleted by default)',
+    'summary': 'List VMs',
     'parameters': [
-        {
-            'in': 'query',
-            'name': 'include_deleted',
-            'schema': {'type': 'boolean'},
-            'required': False,
-            'description': 'Include deleted VMs if true'
-        }
+        {'in': 'query', 'name': 'include_deleted', 'schema': {'type': 'boolean'}, 'required': False,
+         'description': 'Include deleted VMs if true (ignored for admin&all)'},
+        {'in': 'query', 'name': 'all', 'schema': {'type': 'boolean'}, 'required': False,
+         'description': 'Admin only: include all users VMs'}
     ],
     'responses': {
         200: {'description': 'List of VMs'},
@@ -27,10 +24,18 @@ api_bp = Blueprint('api', __name__)
     }
 })
 def api_list_vms():
-    include_deleted = request.args.get('include_deleted', '').lower() in ('1', 'true', 'yes')
-    vms_all = list(current_user.vms)
-    if not include_deleted:
-        vms_all = [vm for vm in vms_all if not vm.is_deleted]
+    include_deleted = request.args.get('include_deleted', '').lower() in ('1','true','yes')
+    all_flag = request.args.get('all', '').lower() in ('1','true','yes')
+
+    if current_user.is_admin and all_flag:
+        vms_all = VM.query.all()
+    else:
+        vms_all = list(current_user.vms)
+
+    if not (current_user.is_admin and all_flag):
+        if not include_deleted:
+            vms_all = [vm for vm in vms_all if not vm.is_deleted]
+
     items = [{'id': vm.id, 'name': vm.name, 'ram_gb': vm.ram_gb, 'cpu': vm.cpu, 'is_deleted': vm.is_deleted} for vm in vms_all]
     return jsonify({'items': items})
 

@@ -4,3 +4,14 @@ Flask-Login==0.6.3
 Werkzeug==3.0.4
 Flasgger==0.9.7.1
 WTForms==3.1.2
+
+# загрузка .env
+python-dotenv==1.0.1
+
+# миграции
+Flask-Migrate==4.0.7
+alembic==1.13.2
+
+# БД и прод-сервер
+psycopg2-binary==2.9.9
+gunicorn==23.0.0

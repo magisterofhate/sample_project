@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Все ВМ</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Имя</th><th>RAM</th><th>CPU</th><th>Удалена</th><th>Владельцы (email)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.vm.id }}</td>
+      <td>{{ r.vm.name }}</td>
+      <td>{{ r.vm.ram_gb }}</td>
+      <td>{{ r.vm.cpu }}</td>
+      <td>{{ 'Да' if r.vm.is_deleted else 'Нет' }}</td>
+      <td>{{ ', '.join(r.owners) if r.owners else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

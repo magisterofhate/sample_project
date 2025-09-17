@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Редактировать ВМ #{{ vm.id }}</h2>
+  <form method="post">
+    <label>Имя ВМ
+      <input type="text" name="name" value="{{ vm.name }}" required>
+    </label>
+    <label>RAM (ГБ) — 0..32
+      <input type="text" name="ram_gb" value="{{ vm.ram_gb }}" required>
+    </label>
+    <label>CPU — 1..16
+      <input type="text" name="cpu" value="{{ vm.cpu }}" required>
+    </label>
+    <div style="display:flex; gap:.5rem;">
+      <a href="{{ url_for('vms') }}" role="button" class="secondary">Отмена</a>
+      <button type="submit" class="submit-btn">Сохранить</button>
+    </div>
+  </form>
+  {% if errors %}
+    <ul class="error">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

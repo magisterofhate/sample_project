@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Пользователи</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Email</th><th>ФИО</th><th>Админ</th><th>Заблокирован</th><th>Действия</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.email }}</td>
+      <td>{{ u.full_name or '—' }}</td>
+      <td>{{ 'Да' if u.is_admin else 'Нет' }}</td>
+      <td>{{ 'Да' if u.is_blocked else 'Нет' }}</td>
+      <td>
+        {% if not u.is_admin %}
+        <form method="post" action="{{ url_for('admin_toggle_block', user_id=u.id) }}" style="display:inline;">
+          <button type="submit" class="contrast">
+            {{ 'Разблокировать' if u.is_blocked else 'Заблокировать' }}
+          </button>
+        </form>
+        {% else %}
+          —
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
