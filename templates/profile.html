@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
   <h2>Профиль</h2>
-  <form method="post">
-    <label>ФИО
-      <input type="text" name="full_name" value="{{ current_user.full_name or '' }}">
-    </label>
-    <label>Email
-      <input type="email" name="email" value="{{ current_user.email }}" required>
-    </label>
-    <button type="submit">Сохранить</button>
-  </form>
+
+  <p><strong>Email:</strong> {{ current_user.email }}</p>
+  <p><strong>ФИО:</strong> {{ current_user.full_name or '—' }}</p>
+  <p><strong>Роль:</strong> {{ 'Администратор' if current_user.is_admin else 'Пользователь' }}</p>
+
+  <div style="display:flex; gap:.5rem; margin-top:.75rem;">
+    <a href="{{ url_for('profile_edit') }}" role="button" class="submit-btn">Редактировать</a>
+  </div>
 {% endblock %}

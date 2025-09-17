@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Редактирование профиля</h2>
+
+  {% if current_user.is_admin %}
+    <p>Вы вошли как администратор. Доступна только смена пароля.</p>
+    <form method="post">
+      <fieldset disabled>
+        <label>Email
+          <input type="email" value="{{ current_user.email }}">
+        </label>
+        <label>ФИО
+          <input type="text" value="{{ current_user.full_name or '' }}">
+        </label>
+      </fieldset>
+
+      <label>Новый пароль (мин. 6 символов)
+        <input type="password" name="new_password" minlength="6" required>
+      </label>
+      <label>Подтверждение нового пароля
+        <input type="password" name="new_password2" minlength="6" required>
+      </label>
+
+      <div style="display:flex; gap:.5rem; margin-top:.75rem;">
+        <a href="{{ url_for('profile') }}" role="button" class="secondary">Отмена</a>
+        <button type="submit" class="submit-btn">Сохранить</button>
+      </div>
+    </form>
+  {% else %}
+    <form method="post">
+      <label>Email
+        <input type="email" name="email" value="{{ current_user.email }}" required>
+      </label>
+      <label>ФИО
+        <input type="text" name="full_name" value="{{ current_user.full_name or '' }}">
+      </label>
+
+      <div style="display:flex; gap:.5rem; margin-top:.75rem;">
+        <a href="{{ url_for('profile') }}" role="button" class="secondary">Отмена</a>
+        <button type="submit" class="submit-btn">Сохранить</button>
+      </div>
+    </form>
+  {% endif %}
+
+  {% if errors %}
+    <ul class="error">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

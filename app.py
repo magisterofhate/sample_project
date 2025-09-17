@@ -199,6 +199,57 @@ def vms_delete():
     return redirect(url_for('vms'))
 
 
+@app.route('/profile', methods=['GET'])
+@login_required
+def profile():
+    return render_template('profile.html', title='Профиль')
+
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def profile_edit():
+    from models import db
+    from models.user import Users
+
+    errors = []
+
+    if request.method == 'POST':
+        # Администратор: только смена пароля
+        if current_user.is_admin:
+            new_password = (request.form.get('new_password') or '').strip()
+            new_password2 = (request.form.get('new_password2') or '').strip()
+            if len(new_password) < 6:
+                errors.append('Пароль должен быть не короче 6 символов')
+            if new_password != new_password2:
+                errors.append('Пароли не совпадают')
+            if not errors:
+                current_user.set_password(new_password)
+                db.session.commit()
+                flash('Пароль успешно изменён')
+                return redirect(url_for('profile'))
+        else:
+            # Обычный пользователь: может менять email и ФИО
+            email = (request.form.get('email') or '').strip().lower()
+            full_name = (request.form.get('full_name') or '').strip()
+
+            if not email:
+                errors.append('Email обязателен')
+            else:
+                # Проверка уникальности email (если изменился)
+                exists = Users.query.filter(Users.email == email, Users.id != current_user.id).first()
+                if exists:
+                    errors.append('Пользователь с таким email уже существует')
+
+            if not errors:
+                current_user.email = email
+                current_user.full_name = full_name or None
+                db.session.commit()
+                flash('Профиль обновлён')
+                return redirect(url_for('profile'))
+
+    return render_template('profile_edit.html', errors=errors)
+
+
 @app.route('/vms/<int:vm_id>/edit', methods=['GET', 'POST'])
 @login_required
 def vm_edit(vm_id):
