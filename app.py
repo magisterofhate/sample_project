@@ -1,5 +1,6 @@
 from flask import Flask, request, redirect, url_for, render_template, flash
 from models import db
+from utils.validators import validate_full_name, validate_password, validate_email
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flasgger import Swagger
 from dotenv import load_dotenv
@@ -88,24 +89,44 @@ def index():
     return render_template('index.html', title='Главная')
 
 
+# =========================
+# Регистрация пользователя
+# =========================
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('vms'))
+
+    errors = []
     if request.method == 'POST':
-        full_name = request.form.get('full_name')
-        email = request.form.get('email').lower()
-        password = request.form.get('password')
-        if Users.query.filter_by(email=email).first():
-            flash('Пользователь с таким email уже существует')
-        else:
-            u = Users(email=email, full_name=full_name)
+        email = (request.form.get('email') or '').strip().lower()
+        full_name = (request.form.get('full_name') or '').strip()
+        password = (request.form.get('password') or '').strip()
+
+        # валидации
+        e = validate_email(email)
+        if e: errors.append(e)
+
+        e = validate_full_name(full_name)
+        if e: errors.append(e)
+
+        e = validate_password(password)
+        if e: errors.append(e)
+
+        # уникальность email
+        if not errors and Users.query.filter_by(email=email).first():
+            errors.append('Пользователь с таким email уже существует')
+
+        if not errors:
+            u = Users(email=email, full_name=full_name, is_admin=False, is_blocked=False)
             u.set_password(password)
             db.session.add(u)
             db.session.commit()
-            login_user(u)
-            return redirect(url_for('vms'))
-    return render_template('auth.html', heading='Регистрация')
+            flash('Регистрация успешна. Войдите в систему.')
+            return redirect(url_for('login'))
+
+    # шаблон формы регистрации
+    return render_template('auth_register.html', errors=errors)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -338,7 +359,9 @@ def admin_vms():
     return render_template('admin_vms.html', rows=rows)
 
 
-# === ADMIN: создать пользователя ===
+# ======================================
+# Админ: создание пользователя вручную
+# ======================================
 @app.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -348,24 +371,33 @@ def admin_user_create():
         email = (request.form.get('email') or '').strip().lower()
         full_name = (request.form.get('full_name') or '').strip()
         password = (request.form.get('password') or '').strip()
-        is_admin = True if request.form.get('is_admin') == 'on' else False
-        is_blocked = True if request.form.get('is_blocked') == 'on' else False
+        is_admin = (request.form.get('is_admin') == 'on')
+        is_blocked = (request.form.get('is_blocked') == 'on')
 
-        if not email:
-            errors.append('Email обязателен')
-        if not password or len(password) < 6:
-            errors.append('Пароль обязателен и не короче 6 символов')
-        if Users.query.filter_by(email=email).first():
+        # валидации
+        e = validate_email(email)
+        if e: errors.append(e)
+
+        e = validate_full_name(full_name)
+        if e: errors.append(e)
+
+        e = validate_password(password)
+        if e: errors.append(e)
+
+        # уникальность email
+        if not errors and Users.query.filter_by(email=email).first():
             errors.append('Пользователь с таким email уже существует')
 
         if not errors:
-            u = Users(email=email, full_name=full_name, is_admin=is_admin, is_blocked=is_blocked)
+            u = Users(email=email, full_name=full_name,
+                      is_admin=is_admin, is_blocked=is_blocked)
             u.set_password(password)
             db.session.add(u)
             db.session.commit()
             flash('Пользователь создан')
             return redirect(url_for('admin_users'))
 
+    # шаблон формы создания пользователя админом
     return render_template('admin_user_create.html', errors=errors)
 
 

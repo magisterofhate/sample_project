@@ -6,6 +6,7 @@ from models import db
 from models.user import Users
 from models.vm import VM
 from sqlalchemy import or_
+from utils.validators import validate_full_name, validate_password, validate_email
 
 api_bp = Blueprint('api', __name__)
 
@@ -403,10 +404,16 @@ def api_create_user():
     is_blocked = bool(data.get('is_blocked', False))
 
     errors = []
-    if not email:
-        errors.append("Email обязателен")
-    if not password or len(password) < 6:
-        errors.append("Пароль обязателен и должен быть не короче 6 символов")
+
+    e = validate_email(email)
+    if e: errors.append(e)
+
+    e = validate_full_name(full_name or '')
+    if e: errors.append(e)
+
+    e = validate_password(password)
+    if e: errors.append(e)
+
     if Users.query.filter_by(email=email).first():
         errors.append("Пользователь с таким email уже существует")
 
@@ -500,8 +507,8 @@ def api_me():
 @swag_from({
     "tags": ["Profile"],
     "summary": "Update current user profile",
-    "description": "Обычный пользователь может изменять **email** и **full_name**. "
-                   "Администратор — **только пароль** (email/ФИО игнорируются).",
+    "description": "Обычный пользователь может изменять email и full_name. "
+                   "Администратор — только пароль (email/ФИО игнорируются).",
     "consumes": ["application/json"],
     "parameters": [
         {
@@ -511,16 +518,28 @@ def api_me():
             "schema": {
                 "type": "object",
                 "properties": {
-                    "email": {"type": "string"},
-                    "full_name": {"type": "string"},
-                    "new_password": {"type": "string", "minLength": 6},
-                    "new_password2": {"type": "string", "minLength": 6}
+                    "email": {"type": "string", "example": "user@example.com"},
+                    "full_name": {"type": "string", "example": "Иван Иванов"},
+                    "new_password": {"type": "string", "minLength": 6, "maxLength": 18, "example": "Pass_123"},
+                    "new_password2": {"type": "string", "minLength": 6, "maxLength": 18, "example": "Pass_123"}
                 }
             }
         }
     ],
     "responses": {
-        200: {"description": "OK"},
+        200: {
+            "description": "OK",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "email": {"type": "string"},
+                    "full_name": {"type": "string"},
+                    "is_admin": {"type": "boolean"},
+                    "is_blocked": {"type": "boolean"}
+                }
+            }
+        },
         400: {"description": "Validation error"},
         401: {"description": "Unauthorized"}
     },
@@ -531,12 +550,14 @@ def api_update_me():
     errors = []
 
     if current_user.is_admin:
-        # только смена пароля
+        # Администратор может менять ТОЛЬКО пароль
         new_password = (data.get('new_password') or '').strip()
         new_password2 = (data.get('new_password2') or '').strip()
+
         if new_password or new_password2:
-            if len(new_password) < 6:
-                errors.append('Пароль должен быть не короче 6 символов')
+            e = validate_password(new_password)
+            if e:
+                errors.append(e)
             if new_password != new_password2:
                 errors.append('Пароли не совпадают')
             if not errors:
@@ -544,32 +565,56 @@ def api_update_me():
                 db.session.commit()
         else:
             errors.append("Для администратора доступна только смена пароля (поля new_password/new_password2).")
-    else:
-        # обычный пользователь: email/full_name
-        email = data.get('email')
-        full_name = data.get('full_name')
 
-        if email is not None:
-            email = email.strip().lower()
-            if not email:
-                errors.append("Email обязателен")
+        if errors:
+            return jsonify({"errors": errors}), 400
+
+        # вернуть обновлённый профиль
+        return jsonify({
+            "id": current_user.id,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "is_admin": bool(current_user.is_admin),
+            "is_blocked": bool(current_user.is_blocked),
+        }), 200
+
+    # Обычный пользователь: можно менять email и full_name
+    email = data.get('email')
+    full_name = data.get('full_name')
+
+    if email is not None:
+        email = (email or '').strip().lower()
+        e = validate_email(email)
+        if e:
+            errors.append(e)
+        else:
+            exists = Users.query.filter(
+                Users.email == email,
+                Users.id != current_user.id
+            ).first()
+            if exists:
+                errors.append("Пользователь с таким email уже существует")
             else:
-                exists = Users.query.filter(Users.email == email, Users.id != current_user.id).first()
-                if exists:
-                    errors.append("Пользователь с таким email уже существует")
-                else:
-                    current_user.email = email
+                current_user.email = email
 
-        if full_name is not None:
-            current_user.full_name = (full_name or '').strip() or None
-
-        if not errors:
-            db.session.commit()
+    if full_name is not None:
+        e = validate_full_name(full_name or '')
+        if e:
+            errors.append(e)
+        else:
+            current_user.full_name = (full_name or '').strip()
 
     if errors:
         return jsonify({"errors": errors}), 400
 
-    return jsonify(user_to_dict(current_user)), 200
+    db.session.commit()
+    return jsonify({
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_admin": bool(current_user.is_admin),
+        "is_blocked": bool(current_user.is_blocked),
+    }), 200
 
 
 @api_bp.route('/users/<int:user_id>', methods=['GET'])

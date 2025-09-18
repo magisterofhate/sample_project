@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Регистрация</h2>
+  <form method="post">
+    <label>Email
+      <input type="email" name="email" required>
+    </label>
+    <label>ФИО
+      <input type="text" name="full_name" required maxlength="100"
+             pattern="[A-Za-zА-Яа-яЁё\s\-_]{1,100}">
+    </label>
+    <label>Пароль
+      <input type="password" name="password" required minlength="6" maxlength="18"
+             pattern="[A-Za-z0-9!@#$%&()_-]{6,18}">
+    </label>
+    <div style="display:flex; gap:.5rem; margin-top:.75rem;">
+      <a href="{{ url_for('login') }}" role="button" class="secondary">Отмена</a>
+      <button type="submit" class="submit-btn">Зарегистрироваться</button>
+    </div>
+  </form>
+  {% if errors %}
+    <ul class="error">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
