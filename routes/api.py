@@ -7,6 +7,9 @@ from models.user import Users
 from models.vm import VM
 from sqlalchemy import or_
 from utils.validators import validate_full_name, validate_password, validate_email
+from flask_login import login_user
+from flask_login import logout_user
+from werkzeug.security import check_password_hash
 
 api_bp = Blueprint('api', __name__)
 
@@ -707,5 +710,107 @@ def api_search_users():
     ).order_by(Users.id.asc()).all()
 
     return jsonify({"items": [user_to_dict(u) for u in users]}), 200
+
+
+@api_bp.route('/login', methods=['POST'])
+@swag_from({
+    "tags": ["Auth"],
+    "summary": "Login user",
+    "description": "Авторизация через API. Возвращает cookie-сессию (используется во всех остальных API-вызовах).",
+    "consumes": ["application/json"],
+    "parameters": [
+        {
+            "in": "body",
+            "name": "body",
+            "required": True,
+            "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                    "email": {"type": "string", "example": "user@example.com"},
+                    "password": {"type": "string", "example": "Secret123"}
+                }
+            }
+        }
+    ],
+    "responses": {
+        200: {
+            "description": "OK",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "user": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "email": {"type": "string"},
+                            "full_name": {"type": "string"},
+                            "is_admin": {"type": "boolean"},
+                            "is_blocked": {"type": "boolean"}
+                        }
+                    }
+                }
+            }
+        },
+        400: {"description": "Missing email/password"},
+        401: {"description": "Invalid credentials or blocked"},
+    }
+})
+def api_login():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    password = (data.get('password') or '').strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email и пароль обязательны"}), 400
+
+    user = Users.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Неверный логин или пароль"}), 401
+
+    if user.is_blocked:
+        return jsonify({"error": "Пользователь заблокирован"}), 401
+
+    if not user.check_password(password):
+        return jsonify({"error": "Неверный логин или пароль"}), 401
+
+    login_user(user)  # создаём session cookie
+    return jsonify({
+        "success": True,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_admin": bool(user.is_admin),
+            "is_blocked": bool(user.is_blocked)
+        }
+    }), 200
+
+
+@api_bp.route('/logout', methods=['POST'])
+@login_required
+@swag_from({
+    "tags": ["Auth"],
+    "summary": "Logout user",
+    "description": "Выход из системы. Сессия (cookie) будет аннулирована.",
+    "responses": {
+        200: {
+            "description": "OK",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "message": {"type": "string"}
+                }
+            }
+        },
+        401: {"description": "Unauthorized"}
+    },
+    "security": [{"cookieAuth": []}]
+})
+def api_logout():
+    logout_user()
+    return jsonify({"success": True, "message": "Вы вышли из системы"}), 200
 
 
